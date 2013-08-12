@@ -218,7 +218,119 @@ whatever extent is possible under the new definitions.
        },
     ]
 },
-)
+),
+('old_annotations',
+ur'''Rule 101/1 (Power=3)
+Obey the Rules                                                                  
+                                                                                
+      Some text.
+
+CFJ 1103 (Judged TRUE, Aug. 21 1998): "In the case of conflict
+ between Rules of unequal Power, ..."
+
+[CFJ ???: "abide by all the Rules" means the Rules as a whole, not              
+ necessarily each individual Rule.                                              
+ CFJ 24: Players must obey the Rules even in out-of-game actions.               
+ CFJ 825: Players would have to obey the Rules even if 101 were                 
+ repealed.                                                                      
+ CFJ 1132, Judged May 18, 1999: A Player failing to perform a duty              
+ required by the Rules within a reasonable time may be in violation             
+ of the Rules, even if the Rules do not provide a time limit for                
+ the performance of that duty.
+ CFJs 815 & 816: If an amendment is made which changes the properties           
+ of an Entity, STUFF. 
+ CFJ 1112, Judged TRUE Jan. 21 1999: "In order to submit a Proposal,            
+ in the sense of R1865 and elsewhere, STUFF."
+ CFJ 1110 (Judged Dec. 11 1998; Appeal completed Dec. 22 1998) &
+ CFJ 1111 (Judged Dec. 22 1998): When the voting period of a proposal
+ whose voting period is in progress...]
+
+[CFJ 1139: Interpretations [judgements at the time of CFJ 1139] need
+not necessairily accord with the reasoning and arguments of Judges or
+Justices given in past CFJs.]
+
+History:                                                                        
+Initial Immutable Rule 101, Jun. 30 1993                                        
+Mutated from MI=Unanimity to MI=3 by Proposal 1480, Mar. 15 1995                
+''',
+{'id': u'101',
+ 'revision': u'1',
+ 'title': u'Obey the Rules',
+ 'text': u'Some text.\n',
+ 'power': u'3',
+ 'history': [
+   {'text': u'Initial Immutable Rule 101',
+    'date': datetime.date(1993, 6, 30),
+    'revision': u'0',
+   },
+   {'text': u'Mutated from MI=Unanimity to MI=3 by Proposal 1480',
+    'date': datetime.date(1995, 3, 15),
+    'after_revision': u'0',
+    'proposal': u'1480',
+   },
+  ],
+ # Expect these sorted by cfj ID
+ 'annotations': [
+   {'text': u'"abide by all the Rules" means the Rules as a whole, not ' +
+            u'necessarily each individual Rule.'},
+   {'cfj': u'24',
+    'text': u'Players must obey the Rules even in out-of-game actions.',
+    },
+   {'cfj': u'815,816',
+    'text': u'If an amendment is made which changes the properties of an ' +
+    'Entity, STUFF.',
+    },
+   {'cfj': u'825',
+    'text': u'Players would have to obey the Rules even if 101 were ' +
+            u'repealed.',
+    },
+   {'cfj': u'1103',
+    'judged_date': datetime.date(1998, 8, 21),
+    'text': u'In the case of conflict between Rules of unequal Power, ...',
+    },
+   {'cfj': u'1110,1111',
+    'judged_date': datetime.date(1998, 12, 22),
+    'text': u'When the voting period of a proposal whose voting period is ' +
+            u'in progress...'
+    },
+   {'cfj': u'1112',
+    'judged_date': datetime.date(1999, 1, 21),
+    'text': u'In order to submit a Proposal, in the sense of R1865 and ' +
+            u'elsewhere, STUFF.'
+    },
+   {'cfj': u'1132',
+    'judged_date': datetime.date(1999, 5, 18),
+    'text': u'A Player failing to perform a duty required by the Rules ' +
+    'within a reasonable time may be in violation of the Rules, even if the ' +
+    'Rules do not provide a time limit for the performance of that duty.'},
+   {'cfj': u'1139',
+    'text': u'Interpretations [judgements at the time of CFJ 1139] need not ' +
+            u'necessairily accord with the reasoning and arguments of Judges ' +
+            u'or Justices given in past CFJs.'},
+  ]
+}),
+('multiline_hist',
+ur'''Rule 42/0 (Power=1)
+Some Title
+
+      Some text.
+
+History:
+Created by Proposal 9999 (foo, bar, baz, quux,
+  beta, omega), 30 July 2010
+''',
+{'id': u'42',
+ 'revision': u'0',
+ 'power': u'1',
+ 'title': u'Some Title',
+ 'text': u'Some text.\n',
+ 'history': [
+    {'text': u'Created by Proposal 9999 (foo, bar, baz, quux, beta, omega)',
+     'date': datetime.date(2010, 7, 30),
+     'proposal': u'9999',
+     'revision': u'0'},
+  ],
+ })
 ]
 
 HISTORY_CASES = [
@@ -250,6 +362,14 @@ HISTORY_CASES = [
     'revision': u'1',
     },
   ),
+  ('amended_cosmetic',
+   u'Amended(7) by Proposal 2830 (Murphy), Mar. 7 1997, cosmetic\n' + 
+   u'  (unattributed)',
+   {'text': u'Amended(7) by Proposal 2830 (Murphy), cosmetic (unattributed)',
+    'date': datetime.date(1997, 3, 7),
+    'proposal': u'2830',
+    'revision': u'7',
+    }),
   ('power_changed',
    u'Power changed from 1 to 2 by Proposal 3999 (harvel), May 2 2000',
    {'text': u'Power changed from 1 to 2 by Proposal 3999 (harvel)',
@@ -300,6 +420,20 @@ HISTORY_CASES = [
     'revision': u'8',
     'proposal': u'A Separation of Powers',
    }),
+  ('created_funnynum',
+   u'Created by Proposal 01-005 (Steve), Feb. 2 2001',
+   {'text': u'Created by Proposal 01-005 (Steve)',
+    'date': datetime.date(2001, 2, 2),
+    'revision': u'0',
+    'proposal': u'01-005',
+    }),
+  ('amended_funnynum',
+   u'Amended(6) by Proposal 535[2001] (Elysion), Feb. 2 2001',
+   {'text': u'Amended(6) by Proposal 535[2001] (Elysion)',
+    'date': datetime.date(2001, 2, 2),
+    'revision': u'6',
+    'proposal': u'535[2001]',
+    }),
   ('initial',
    u'Initial Immutable Rule 101, 30 June 1993',
    {'text': 'Initial Immutable Rule 101',
@@ -371,15 +505,81 @@ history: ...
 ]),
 ]
 
+FLR_CASES = [
+    ('one_rule_one_orphan_cfj',
+ur"""THE FULL LOGICAL RULESET
+
+----------------------------------------------------------------------
+
+Not a rule.
+
+----------------------------------------------------------------------
+
+======================================================================
+The Game of Agora
+      A category concerning this nomic generally, constitutional
+      matters, and relationships between the most fundamental nomic
+      entities.
+----------------------------------------------------------------------
+
+Rule 101/0 (Power=3)
+The Rights of Agorans
+
+  Sample text.
+
+History:
+Initial rule 101, 1 Jan 2010
+
+----------------------------------------------------------------------
+
+======================================================================
+Catch-All Category
+      A miscellaneous category.
+----------------------------------------------------------------------
+
+Sub-category name
+
+[CFJ 1892 (called 2 February 2008): An agreement that is not binding
+is thereby not a contract.]
+
+----------------------------------------------------------------------
+
+""",
+[{'type': 'category',
+  'name': u'The Game of Agora',
+  'description': u'A category concerning this nomic generally, constitutional ' +
+  u'matters, and relationships between the most fundamental nomic entities.'
+  },
+ {'type': 'rule',
+  'title': u'The Rights of Agorans',
+  'id': u'101', 'revision': u'0', 
+  'text': u'Sample text.\n',
+  'history': [{'text': u'Initial rule 101', 'date': datetime.date(2010, 1, 1),
+               'revision': u'0'}],
+  'power': u'3',
+  'category': 'The Game of Agora',
+  },
+ {'type': 'category',
+   'name': u'Catch-All Category',
+   'description': u'A miscellaneous category.',
+  },
+ {'type': 'annotation',
+  'category': u'Catch-All Category',
+  'subcategory': u'Sub-category name',
+  'cfj': u'1892',
+  'date': datetime.date(2008, 2, 2),
+  'text': u'An agreement that is not binding is thereby not a contract.'}])
+]
+
 class ParseRuleFLRTest(unittest.TestCase):
   def _test_one(self, input, output):
     self.maxDiff = None
     parsed = parse_rule.parse_rule_flr(input)
-    if 'text' in parsed and 'text' in output:
+    if parsed != None and output != None and \
+       'text' in parsed and 'text' in output:
       # Test text separately for better errors.
       self.assertEqual(output['text'], parsed['text'])
-    self.assertDictEqual(output, parse_rule.parse_rule_flr(input))
-  pass
+    self.assertDictEqual(output, parsed)
 
 class ParseRuleZeframTest(unittest.TestCase):
   def _test_one(self, input, output):
@@ -388,23 +588,28 @@ class ParseRuleZeframTest(unittest.TestCase):
     self.assertEqual(len(parsed), len(output))
     for parsed_item, output_item in zip(parsed, output):
       self.assertDictEqual(output_item, parsed_item)
-  pass
 
 class ParseHistoryTest(unittest.TestCase):
   def _test_one(self, input, output):
     self.assertDictEqual(output, parse_rule._parse_history_line(input))
-  pass
+
+class ParseFLRTest(unittest.TestCase):
+  def _test_one(self, input, output):
+    current_parse = []
+    parse_rule.parse_flr(input.split('\n'), lambda d: current_parse.append(d))
+    self.assertListEqual(output, current_parse)
 
 def _make_test(o, label, input, output):
   setattr(o, 'test_' + label,
       lambda self: self._test_one(input, output))
-
 
 def _generate_tests():
   for label, input, output in RULE_CASES:
     _make_test(ParseRuleFLRTest, label, input, output)
   for label, input, output in HISTORY_CASES:
     _make_test(ParseHistoryTest, label, input, output)
+  for label, input, output in FLR_CASES:
+    _make_test(ParseFLRTest, label, input, output)
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG, stream=sys.stderr)
