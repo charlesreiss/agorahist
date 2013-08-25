@@ -7,6 +7,8 @@ def _unindent(text):
   if lines[-1] == '':
     lines = lines[:-1]
   nonempty_lines = filter(lambda x: re.match(r'^\s*$', x) == None, lines)
+  if len(nonempty_lines) == 0:
+    return u''
   indents = map(lambda x: re.search(r'^\s*', x).end(), nonempty_lines)
   min_indent = min(indents)
   lines = map(lambda x: x[min_indent:], lines)
@@ -37,6 +39,7 @@ def _norm_whitespace(text):
 def _parse_date(raw_date):
   if raw_date == None:
     return None
+  raw_date = raw_date.replace('ca. ', '')
   raw_date = raw_date.replace('Jaun', 'Jan')
   raw_date = raw_date.replace('Febraury', 'February')
   raw_date = raw_date.replace('Apirl', 'April')
@@ -45,6 +48,13 @@ def _parse_date(raw_date):
   raw_date = raw_date.replace(',', '')
   raw_date = _norm_whitespace(raw_date)
   if re.match(r'^[a-zA-Z]+ \d+$', raw_date) != None:
+    try:
+      parsed_date = datetime.datetime.strptime(raw_date, '%B %Y')
+    except ValueError:
+      parsed_date = datetime.datetime.strptime(raw_date, '%b %Y')
+  elif re.match(r'^[a-zA-Z]+ or [a-zA-Z]+ \d+$', raw_date) != None:
+    m = re.match(r'^[a-zA-Z]+ or ([a-zA-Z]+ \d+)$', raw_date)
+    raw_date = m.group(1)
     try:
       parsed_date = datetime.datetime.strptime(raw_date, '%B %Y')
     except ValueError:
@@ -63,8 +73,10 @@ def _parse_date(raw_date):
       parsed_date.day)
 
 def _parse_history_line(text):
+  text = _norm_whitespace(text)
+  logging.debug('history line: %s', text)
   result = {}
-  m = re.search(r'(?s)(, substantial|, cosmetic.*)$', text)
+  m = re.search(r'(?s)(, su[bs].*|, co[sm].*|\(\S+\))$', text)
   post_text = ''
   if m != None:
     post_text = m.group(0)
@@ -88,6 +100,9 @@ def _parse_history_line(text):
   elif (text.startswith('Created') or text.startswith('Enacted') or
         text.startswith('Initial')):
     result['revision'] = u'0'
+
+  if text.startswith('Repeal'):
+    result['repeal'] = True
   logging.debug('Parsing [%s] as [%s]', text, result)
   return result
 
@@ -173,7 +188,7 @@ def _parse_annotations(text):
 def parse_rule_flr(text):
   result = {}
   m = re.search(
-      r'^Rule (?P<id>\d+)/(?P<revision>\d+) \((?P<pow_note>[^)]+)\)\n' +
+      r'^Rule (?P<id>\d+)/(?P<revision>\d+) \((?P<pow_note>[^)]+)\)\s*\n' +
       r'(?P<title>.*)',
       text)
   if m != None:
@@ -188,19 +203,19 @@ def parse_rule_flr(text):
     else:
       logging.error('Could not parse Power annotation: %s', pow_note)
   else:
+    logging.error('Non-rule {{%s}}', text)
     return None
   text = re.sub(r'^\s*\n', '', text)
   content = None
   history = None
   annotations = []
-  if text.startswith(' '):
-    m = re.search(r'^((?: .*\n|\n)+)', text)
-    assert(m != None)
+  if text.startswith(' ') or text.startswith('History:'):
+    m = re.search(r'^((?: .*\n|\n)*)', text)
     content = _unindent(m.group(1))
     text = text[m.end():]
-    m = re.search(r'(?:\n|^)History:\s*\n', text)
+    m = re.search(r'(?:\n|^)History:\s*((?:\n.*\S.*)+)', text)
     if m != None:
-      history_text = _lines(text[m.end():])
+      history_text = _lines(m.group(1))
       # TODO(Charles): Find continued lines
       history_text = filter(lambda x: re.match('^\s*$', x) == None,
           history_text)
@@ -210,9 +225,11 @@ def parse_rule_flr(text):
       for entry in history:
         if 'revision' not in entry and last_revision != None:
           entry['after_revision'] = last_revision
-        else:
-          last_revision = entry['revision']
-      text = text[:m.start()]
+        elif 'revision' in entry:
+          last_revision = entry.get('revision')
+      if len(history) > 0 and 'repeal' in history[-1]:
+        result['repealed'] = True
+      text = text[:m.start()] + '\n\n\n' + text[m.end():]
     else:
       logging.error('Could not find history in %s', text)
     annotations = _parse_annotations(text)
@@ -235,15 +252,16 @@ def parse_flr(flr_stream, callback):
   current_category = None
   for line in flr_stream:
     if re.match(r'^-{40,}$', line) != None:
-      m = re.search(r'={40,}\n(?P<name>.*)\n(?P<description>(?:.*\n)+)',
+      m = re.search(r'(?s)={40,}\n(?P<name>[^\n]*)\n(?P<description>.*)',
           current_segment)
       if m != None:
         current_category = _norm_whitespace(m.group('name'))
-        callback({
-          'type': 'category',
-          'name': current_category,
-          'description': _norm_whitespace(m.group('description'))
-          })
+        if not current_category.startswith('Table of Content'):
+          callback({
+            'type': 'category',
+            'name': current_category,
+            'description': _norm_whitespace(m.group('description'))
+            })
       else:
         current_segment = re.sub(r'^\s+','',current_segment)
         result = parse_rule_flr(current_segment)
@@ -256,6 +274,7 @@ def parse_flr(flr_stream, callback):
           if m != None:
             sub_category = m.group(1)
           else:
+            logging.error('No subcategory for %s', current_segment)
             sub_category = None
           for annotation in  _parse_annotations(current_segment):
             annotation['type'] = 'annotation'
@@ -264,6 +283,19 @@ def parse_flr(flr_stream, callback):
             callback(annotation)
       current_segment = ''
     else:
-      current_segment += line + '\n'
+      current_segment += line
   if re.match(r'^\s*$', current_segment) == None:
     logging.warning('Extra segment: %s', current_segment)
+
+def parse_zefram(zefram_stream, callback):
+  current_segment = ''
+  for line in zefram_stream:
+    if re.match(r'^-{40,}$', line) != None:
+      results = parse_rule_zefram(current_segment)
+      if results != None:
+        for item in results:
+          item['type'] = 'rule'
+          callback(item)
+      current_segment = ''
+    else:
+      current_segment = current_segment + line 

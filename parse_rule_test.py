@@ -5,6 +5,7 @@ import parse_rule
 
 import datetime
 import sys
+import StringIO
 
 RULE_CASES = [
 ("flr_map",
@@ -219,6 +220,43 @@ whatever extent is possible under the new definitions.
     ]
 },
 ),
+(
+'annotations_after_history',
+ur'''Rule 9999/0 (Power=1)     
+Some Title
+     
+      Some text.
+
+History:
+Created by Proposal 3558 (General Chaos), Oct. 24 1997
+
+[CFJs 1666-1667 (called 14 May 2007): Where two binding agreements each
+construct a partnership, the partnerships have distinct identities even
+if the set of partners is the same.]
+''',
+{
+  'id': u'9999',
+  'revision': u'0',
+  'power': u'1',
+  'title': u'Some Title',
+  'text': u'Some text.\n',
+  'annotations': [
+    {'cfj': u'1666,1667',
+     'date': datetime.date(2007, 5, 14),
+     'text': u'Where two binding agreements each construct a partnership, ' +
+             u'the partnerships have distinct identities even if the set ' +
+             u'of partners is the same.'
+    },
+  ],
+  'history': [
+    {'text': u'Created by Proposal 3558 (General Chaos)',
+     'date': datetime.date(1997, 10, 24),
+     'proposal': u'3558',
+     'revision': u'0',
+    },
+  ],
+},
+),
 ('old_annotations',
 ur'''Rule 101/1 (Power=3)
 Obey the Rules                                                                  
@@ -318,6 +356,8 @@ Some Title
 History:
 Created by Proposal 9999 (foo, bar, baz, quux,
   beta, omega), 30 July 2010
+Amended(12) by Proposal 3990, "Harsher Blot Penalties", (Elysion),              
+  Mar. 30 2000 
 ''',
 {'id': u'42',
  'revision': u'0',
@@ -329,11 +369,78 @@ Created by Proposal 9999 (foo, bar, baz, quux,
      'date': datetime.date(2010, 7, 30),
      'proposal': u'9999',
      'revision': u'0'},
+    {'text': u'Amended(12) by Proposal 3990, "Harsher Blot Penalties", ' +
+             u'(Elysion)',
+     'date': datetime.date(2000, 3, 30),
+     'proposal': u'3990',
+     'revision': u'12'},
   ],
- })
+ }),
+('repealed_notext',
+ur'''Rule 42/1 (Power=1)
+Some Title
+
+
+History:
+Created by Proposal 9999 (foo), 29 July 2010
+Repealed by Proposal 8888 (bar), 30 July 2010
+''',
+{'id': u'42',
+ 'power': u'1',
+ 'revision': u'1',
+ 'title': u'Some Title',
+ 'text': u'',
+ 'repealed': True,
+ 'history': [
+   {'text': u'Created by Proposal 9999 (foo)',
+    'date': datetime.date(2010, 7, 29),
+    'proposal': u'9999',
+    'revision': u'0'},
+   {'text': u'Repealed by Proposal 8888 (bar)',
+    'date': datetime.date(2010, 7, 30),
+    'proposal': u'8888',
+    'repeal': True,
+    'after_revision': u'0'},
+ ],
+}),
+('repealed_sometext',
+ur'''Rule 42/1 (Power=1)
+Some Title
+
+    Some text.
+
+History:
+Created by Proposal 9999 (foo), 29 July 2010
+Repealed by Proposal 8888 (bar), 30 July 2010
+''',
+{'id': u'42',
+ 'power': u'1',
+ 'revision': u'1',
+ 'title': u'Some Title',
+ 'text': u'Some text.\n',
+ 'repealed': True,
+ 'history': [
+   {'text': u'Created by Proposal 9999 (foo)',
+    'date': datetime.date(2010, 7, 29),
+    'proposal': u'9999',
+    'revision': u'0'},
+   {'text': u'Repealed by Proposal 8888 (bar)',
+    'date': datetime.date(2010, 7, 30),
+    'proposal': u'8888',
+    'after_revision': u'0',
+    'repeal': True},
+ ],
+}),
 ]
 
 HISTORY_CASES = [
+  ('repealed',
+   u'Repealed by Proposal 1234 (Foo), 24 August 2013',
+   {'text': u'Repealed by Proposal 1234 (Foo)',
+    'date': datetime.date(2013, 8, 24),
+    'proposal': u'1234',
+    'repeal': True
+    }),
   ('created',
    u'Created by Proposal 4735 (Maud), 5 May 2005',
    {'text': u'Created by Proposal 4735 (Maud)',
@@ -357,6 +464,24 @@ HISTORY_CASES = [
   ('amended_substantial',
    u'Amended(1) by Proposal 2795 (Andre), Jan. 30 1997, substantial',
    {'text': u'Amended(1) by Proposal 2795 (Andre), substantial',
+    'date': datetime.date(1997, 1, 30),
+    'proposal': u'2795',
+    'revision': u'1',
+    },
+  ),
+  ('amended_substantial2',
+   u'Amended(1) by Proposal 2795 (Andre), Jan. 30 1997, substantial ' +
+   u'(unattributed)',
+   {'text': u'Amended(1) by Proposal 2795 (Andre), substantial (unattributed)',
+    'date': datetime.date(1997, 1, 30),
+    'proposal': u'2795',
+    'revision': u'1',
+    },
+  ),
+  ('amended_substantial_misspelled',
+   u'Amended(1) by Proposal 2795 (Andre), Jan. 30 1997, susbtantial ' +
+   u'(unattributed)',
+   {'text': u'Amended(1) by Proposal 2795 (Andre), susbtantial (unattributed)',
     'date': datetime.date(1997, 1, 30),
     'proposal': u'2795',
     'revision': u'1',
@@ -516,6 +641,12 @@ Not a rule.
 ----------------------------------------------------------------------
 
 ======================================================================
+Table of Contents
+
+  Some stuff.
+----------------------------------------------------------------------
+
+======================================================================
 The Game of Agora
       A category concerning this nomic generally, constitutional
       matters, and relationships between the most fundamental nomic
@@ -557,7 +688,7 @@ is thereby not a contract.]
   'history': [{'text': u'Initial rule 101', 'date': datetime.date(2010, 1, 1),
                'revision': u'0'}],
   'power': u'3',
-  'category': 'The Game of Agora',
+  'category': u'The Game of Agora',
   },
  {'type': 'category',
    'name': u'Catch-All Category',
@@ -596,7 +727,7 @@ class ParseHistoryTest(unittest.TestCase):
 class ParseFLRTest(unittest.TestCase):
   def _test_one(self, input, output):
     current_parse = []
-    parse_rule.parse_flr(input.split('\n'), lambda d: current_parse.append(d))
+    parse_rule.parse_flr(StringIO.StringIO(input), lambda d: current_parse.append(d))
     self.assertListEqual(output, current_parse)
 
 def _make_test(o, label, input, output):
