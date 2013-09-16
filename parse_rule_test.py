@@ -431,6 +431,65 @@ Repealed by Proposal 8888 (bar), 30 July 2010
     'repeal': True},
  ],
 }),
+('weird_multiline_hist',
+ur'''Rule 42/0 (Power=1)
+Some Title
+
+    Some text.
+
+History:
+Amended(26) by Proposal 5642 (Sgeo, ais523, root,                               
+BobTHJ, Wooble, Murphy, Zefram, Goethe, Pavitra),                               
+  29 July 2008  
+''',
+{
+  'id': u'42',
+  'power': u'1',
+  'revision': u'0',
+  'title': u'Some Title',
+  'text': u'Some text.\n',
+  'history': [
+    {'text': u'Amended(26) by Proposal 5642 (Sgeo, ais523, root, BobTHJ, ' +
+             u'Wooble, Murphy, Zefram, Goethe, Pavitra)',
+     'date': datetime.date(2008, 7, 29),
+     'proposal': u'5642',
+     'revision': u'26',
+    },
+  ],
+}),
+('crossref_after_annot',
+ur'''Rule 42/0 (Power=1)
+Some Title
+
+    Some text.
+
+History:
+Initial rule, 1 Jan 2010
+
+[CFJ 1 (1 Jan 2009): Some annotation.]
+[Cross-references (28 May 2008): Some stuff that's ignored:
+  * Point a (Rule 1234)
+  * Point b (Rule 5678)
+]''',
+{
+  'id': u'42',
+  'power': u'1',
+  'revision': u'0',
+  'history': [
+    {'text': u'Initial rule',
+     'date': datetime.date(2010, 1, 1),
+     'revision': u'0',
+     },
+  ],
+  'annotations': [
+    {'cfj': u'1',
+     'date': datetime.date(2009, 1, 1),
+     'text': u'Some annotation.',
+     }
+  ],
+  'text': u'Some text.\n',
+  'title': u'Some Title',
+}),
 ]
 
 HISTORY_CASES = [

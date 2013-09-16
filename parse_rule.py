@@ -20,7 +20,11 @@ def _lines(text):
   for line in text.split('\n'):
     if line == '':
       continue
-    if cur_line != None and line.startswith(' '):
+    if (cur_line != None and
+        cur_line.count('\n') == 0 and
+        cur_line.count('(') > cur_line.count(')')):
+      cur_line += '\n' + line
+    elif cur_line != None and line.startswith(' '):
       cur_line += '\n' + line
     else:
       if cur_line != None:
@@ -46,6 +50,11 @@ def _parse_date(raw_date):
   raw_date = raw_date.replace('Augut', 'August')
   raw_date = raw_date.replace('.', '')
   raw_date = raw_date.replace(',', '')
+  raw_date = raw_date.replace('<ay', 'May')
+  raw_date = raw_date.replace(' 010', ' 2010')
+  raw_date = raw_date.replace(' 011', ' 2011')
+  raw_date = raw_date.replace(' 012', ' 2012')
+  raw_date = raw_date.replace(' 013', ' 2013')
   raw_date = _norm_whitespace(raw_date)
   if re.match(r'^[a-zA-Z]+ \d+$', raw_date) != None:
     try:
@@ -63,12 +72,20 @@ def _parse_date(raw_date):
     try:
       parsed_date = datetime.datetime.strptime(raw_date, '%B %d %Y')
     except ValueError:
-      parsed_date = datetime.datetime.strptime(raw_date, '%b %d %Y')
+      try: 
+        parsed_date = datetime.datetime.strptime(raw_date, '%b %d %Y')
+      except ValueError:
+        logging.error('Error parsing date <%s>', raw_date)
+        raise
   else:
     try:
       parsed_date = datetime.datetime.strptime(raw_date, '%d %B %Y')
     except ValueError:
-      parsed_date = datetime.datetime.strptime(raw_date, '%d %b %Y') 
+      try:
+        parsed_date = datetime.datetime.strptime(raw_date, '%d %b %Y') 
+      except ValueError:
+        logging.error('Error parsing date <%s>', raw_date)
+        raise
   return datetime.date(parsed_date.year, parsed_date.month,
       parsed_date.day)
 
@@ -76,15 +93,20 @@ def _parse_history_line(text):
   text = _norm_whitespace(text)
   logging.debug('history line: %s', text)
   result = {}
-  m = re.search(r'(?s)(, su[bs].*|, co[sm].*|\(\S+\))$', text)
+  m = re.search(r'(?s)(, su[bs][^,]*|, co[sm][^,]*|\(\S+\))$', text)
   post_text = ''
   if m != None:
     post_text = m.group(0)
     text = text[:m.start()]
-  m = re.match(r'(?s)(?P<text>.*), (?P<date>[^,]+)', text)
+  m = re.match(r'(?s)(?P<text>.*), (?P<date>[^,]+)$', text)
   if m != None:
     result['text'] = _norm_whitespace(m.group('text') + post_text)
-    result['date'] = _parse_date(m.group('date'))
+    try:
+      result['date'] = _parse_date(m.group('date'))
+    except ValueError:
+      logging.error('Parsing <%s> (text %s; date %s; post-text %s): %s', 
+          text, m.group('text'), m.group('date'), post_text)
+      raise
   else:
     result['text'] = text + post_text
     date = None
@@ -126,6 +148,7 @@ def parse_rule_zefram(text):
         history.append(_parse_history_line(m.group(1)))
         if 'revision' in history[-1]:
           last_revision = history[-1]['revision']
+        if 'date' in history[-1]:
           last_date = history[-1]['date']
     if m.group('rule_text') != None:
       rule_texts.append(
@@ -142,14 +165,15 @@ def parse_rule_zefram(text):
 
 def _parse_annotations(text):
   annotations = []
-  LINES_NOCFJ = r'\s*[^&\s].*(?:\n(?!.CFJ).*)*'
+  LINES_NOCFJ = r'\s*[^&\s].*(?:\n(?!.CFJ)(?!\[).*)*'
   CFJ_CALLED = r'\s*(?:\([cC]alled\s+(?P<called>[^)]+)\))?\s*'
   CFJ_JUDGED = r'\s*(?:\(?[jJ]udged\s+(?:TRUE|FALSE)?,?\s*' + \
                r'(?P<judged>\S+ \d+,? \d+)(?:[^)]*\))?)?\s*'
   OPT_PARENS = r'(?:\([^)]+\))?'
   CFJ_IDS = r'CFJs? ' + \
-            r'(?P<id>\d+|\?\?\?)(?:-(?P<id_end>\d+)|\s*' + \
-            OPT_PARENS + r'\s*\&\s*(?:CFJ\s*)?(?P<id2>\d+))?'
+            r'(?P<id>\d+[abcde]?|\?\?\?)(?:-(?P<id_end>\d+)|\s*' + \
+            OPT_PARENS + r'\s*\&\s*(?:CFJ\s*)?(?P<id2>\d+[abcde]?))?' + \
+            r'(?!\s*is)(?!\s*were)(?!\d)'
   for m in re.finditer(
       CFJ_IDS + r'[:,]?' + CFJ_CALLED + CFJ_JUDGED + r':?(?P<text>' + 
       LINES_NOCFJ + r')', text):
@@ -188,7 +212,8 @@ def _parse_annotations(text):
 def parse_rule_flr(text):
   result = {}
   m = re.search(
-      r'^Rule (?P<id>\d+)/(?P<revision>\d+) \((?P<pow_note>[^)]+)\)\s*\n' +
+      r'^Rule (?P<id>\d+)(?:/(?P<revision>\d+))? \((?P<pow_note>[^)]+)\)\s*' +
+      r'(?:\[[^\n]+\]\s*)?\n' +
       r'(?P<title>.*)',
       text)
   if m != None:
@@ -203,7 +228,20 @@ def parse_rule_flr(text):
     else:
       logging.error('Could not parse Power annotation: %s', pow_note)
   else:
-    logging.error('Non-rule {{%s}}', text)
+    if not (text.startswith('THE FULL LOGICAL') or
+            text.startswith('Rule N') or
+            text.startswith('Rule n') or
+            text.startswith('Index of ') or
+            text.startswith('Statist') or
+            text.startswith('[Rules are listed') or
+            re.search(r'^\s*\[Last proposal', text) != None or
+            text.startswith('END OF THE') or
+            re.search('^\s*END OF THE', text) != None or
+            text.startswith('Miscellaneous') or
+            text.startswith('Contracts /') or
+            text.startswith('Truthfulness') or
+            text.startswith('Rules are listed as follows')):
+      logging.error('Non-rule {{%s}}', text)
     return None
   text = re.sub(r'^\s*\n', '', text)
   content = None
@@ -220,7 +258,11 @@ def parse_rule_flr(text):
       history_text = filter(lambda x: re.match('^\s*$', x) == None,
           history_text)
       logging.debug('history lines: %s', history_text)
-      history = map(_parse_history_line, history_text)
+      try:
+        history = map(_parse_history_line, history_text)
+      except ValueError:
+        logging.error('Error parsing <%s>', history_text)
+        raise
       last_revision = None
       for entry in history:
         if 'revision' not in entry and last_revision != None:

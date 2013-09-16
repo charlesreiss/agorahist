@@ -6,9 +6,9 @@ CREATE TABLE rule_categories (
 CREATE TABLE rules (
   rule_id INTEGER NOT NULL PRIMARY KEY,
 
-  category_name STRING REFERENCES rule_categories (name),
+  category STRING REFERENCES rule_categories (name),
 
-  canonical_title STRING,
+  canonical_title STRING
 );
 
 CREATE TABLE sources (
@@ -33,6 +33,10 @@ CREATE TABLE rule_texts (
   UNIQUE (rule_id, text, revision, category)
 );
 
+CREATE INDEX rule_texts_by_unique ON rule_texts (
+  rule_id, revision, text, category
+);
+
 CREATE INDEX rule_texts_by_id_revision ON rule_texts (
   rule_id, revision, revision_date
 );
@@ -48,7 +52,7 @@ CREATE TABLE text_sources (
   UNIQUE (text_id, source_name)
 );
 
-CREATE INDEX text_sources_by_text_id ON text_sources (text_id);
+CREATE INDEX text_sources_by_text_id ON text_sources (text_id, source_name);
 
 CREATE TABLE rule_history (
   rule_history_id INTEGER NOT NULL PRIMARY KEY,
@@ -68,6 +72,10 @@ CREATE TABLE rule_history (
   UNIQUE (rule_id, text, revision)
 );
 
+CREATE INDEX rule_history_by_unique ON rule_history (
+  rule_id, revision, text
+);
+
 CREATE INDEX rule_history_by_id_revision ON rule_history (
   rule_id, revision, after_revision, history_date
 );
@@ -80,7 +88,7 @@ CREATE TABLE history_sources (
 );
 
 CREATE INDEX history_sources_by_history_id ON history_sources (
-  rule_history_id
+  rule_history_id, source_name
 );
 
 -- NB: We currently don't try to store historical rule annotations.
@@ -113,4 +121,6 @@ CREATE TABLE annotation_sources (
   UNIQUE (annotation_id, source_name)
 );
 
-CREATE INDEX annotation_sources_by_id ON annotation_sources (annotation_id);
+CREATE INDEX annotation_sources_by_id ON annotation_sources (
+  annotation_id, source_name
+);
